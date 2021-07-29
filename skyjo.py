@@ -7,6 +7,7 @@ Ceci est un script temporaire.
 
 import numpy as np
 
+from weakref import ref
 
 class InvalidCardIndex(Exception):
     pass
@@ -21,6 +22,9 @@ initial_knowledge = 2
 cards_per_player = 12
 row_per_player = 4
 column_per_player = cards_per_player // row_per_player
+
+value_threshold_discard = 4
+value_threshold_replace = 4
 
 
 law = np.array([5, 10, 15] + [10]*12)
@@ -48,7 +52,7 @@ class Skyjo_game():
     def __gen_players(self, n_player):
         player_list = []
         for k in range(n_player):
-            player_list.append(Skyjo_player())
+            player_list.append(Skyjo_player(self))
         for k in range(12):
             for player in player_list:
                 player._take_card(self.card_from_deck())
@@ -67,8 +71,15 @@ class Skyjo_game():
         top_card = self.__discard.pop()
         return top_card
     
+    def card_to_discard(self, card):
+        self.__discard.append(card)
+    
     def look_at_top_discard_card(self):
         top_card_value = self.__discard[-1]
+        return top_card_value
+
+    def look_at_top_deck_card(self):
+        top_card_value = self.__deck[-1]
         return top_card_value
     
     def __determine_starting_player(self):
@@ -79,10 +90,13 @@ class Skyjo_game():
         sorting_list = np.array([(k, np.sum(val), np.max(val)) for k, val in enumerate(cards_value_list)])
         starting_player_index = sorting_list[np.lexsort((sorting_list[:,2], sorting_list[:,1]))][-1, 0]
         self.player_list = np.roll(self.player_list, -starting_player_index)
-
+    
+    def play_next_move(self):
+        pass
 
 class Skyjo_player():
-    def __init__(self):
+    def __init__(self, game = None):
+        self.__ref_game = ref(game)
         self.__cards = []
         self.__startegy = None
         self.__unknown_cards = np.ones(12, dtype=np.int8)
@@ -119,10 +133,26 @@ class Skyjo_player():
     def get_known_score(self):
         return self.__cards[np.abs(self.__)]
     
-    def play(self, startegy='std'):
-        if startegy == 'std':
-            top_discard_card_value
-            
+    def replace_card(self, position, card):
+        game = self.__ref_game()
+        game.card_to_discard(self.__cards[position])
+        self.__cards[position] = card
+        
+    def play(self, startegy='lowest'):
+        game = self.__ref_game()
+        top_deck_card_value = game.look_at_top_deck_card()
+        top_discard_card_value = game.look_at_top_discard_card()
+        known_cards_positions, known_cards_values = self.get_known_cards()
+        if startegy == 'lowest':
+            if top_discard_card_value <= value_threshold_discard:
+                if np.max(known_cards_values) > top_discard_card_value:
+                    argmax_known_card = known_cards_positions[np.argmax(known_cards_values)]
+                    top_discard_card = game.card_from_discard()
+                    self.replace_card(argmax_known_card, top_discard_card)
+        else:
+            pass
+        return top_deck_card_value, top_discard_card_value
+    
         
 skyjo_instance = Skyjo_game(4)
 for k in skyjo_instance.player_list:
