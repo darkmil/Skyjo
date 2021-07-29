@@ -137,10 +137,10 @@ class Skyjo_player():
         game = self.__ref_game()
         game.card_to_discard(self.__cards[position])
         self.__cards[position] = card
+        # self.__unknown_cards[position] = 0
         
     def play(self, startegy='lowest'):
         game = self.__ref_game()
-        top_deck_card_value = game.look_at_top_deck_card()
         top_discard_card_value = game.look_at_top_discard_card()
         known_cards_positions, known_cards_values = self.get_known_cards()
         if startegy == 'lowest':
@@ -149,6 +149,11 @@ class Skyjo_player():
                     argmax_known_card = known_cards_positions[np.argmax(known_cards_values)]
                     top_discard_card = game.card_from_discard()
                     self.replace_card(argmax_known_card, top_discard_card)
+            else:
+                top_deck_card = game.card_from_deck()
+                if top_deck_card <= value_threshold_replace:
+                    position_uk_card = self.__select_uk_card_at_random()
+                    
         else:
             pass
         return top_deck_card_value, top_discard_card_value
