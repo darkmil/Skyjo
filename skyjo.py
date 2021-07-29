@@ -5,9 +5,12 @@
 Ceci est un script temporaire.
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 
+from tqdm import trange, tqdm
 from weakref import ref
+
 
 class InvalidCardIndex(Exception):
     pass
@@ -15,7 +18,8 @@ class InvalidCardIndex(Exception):
 class CardAlreadyKnown(Exception):
     pass
 
-
+class InvalidStartegy(Exception):
+    pass
 
 
 initial_knowledge = 2
@@ -131,13 +135,17 @@ class Skyjo_player():
         return indices_known_cards, self.__cards[indices_known_cards]
     
     def get_known_score(self):
-        return self.__cards[np.abs(self.__)]
+        _, known_cards = self.get_known_cards()
+        return np.sum(known_cards)
+    
+    def _get_score(self):
+        return np.sum(self.__cards)
     
     def replace_card(self, position, card):
         game = self.__ref_game()
         game.card_to_discard(self.__cards[position])
         self.__cards[position] = card
-        # self.__unknown_cards[position] = 0
+        self.__unknown_cards[position] = 0
         
     def play(self, startegy='lowest'):
         game = self.__ref_game()
@@ -146,19 +154,54 @@ class Skyjo_player():
         if startegy == 'lowest':
             if top_discard_card_value <= value_threshold_discard:
                 if np.max(known_cards_values) > top_discard_card_value:
-                    argmax_known_card = known_cards_positions[np.argmax(known_cards_values)]
+                    position_known_card = known_cards_positions[np.argmax(known_cards_values)]
                     top_discard_card = game.card_from_discard()
-                    self.replace_card(argmax_known_card, top_discard_card)
+                    self.replace_card(position_known_card, top_discard_card)
+                else:
+                    top_discard_card = game.card_from_discard()
+                    position_uk_card = self.__select_uk_card_at_random()
+                    self.replace_card(position_uk_card, top_discard_card)
             else:
                 top_deck_card = game.card_from_deck()
                 if top_deck_card <= value_threshold_replace:
-                    position_uk_card = self.__select_uk_card_at_random()
-                    
+                    if np.max(known_cards_values) > top_deck_card:
+                        position_known_card = known_cards_positions[np.argmax(known_cards_values)]
+                        self.replace_card(position_known_card, top_deck_card)
+                    else:
+                        position_uk_card = self.__select_uk_card_at_random()
+                        self.replace_card(position_uk_card, top_deck_card)
+                else:
+                    self.look_at_random_card()
         else:
-            pass
-        return top_deck_card_value, top_discard_card_value
+            raise InvalidStartegy("The strategy selected doesn't exist.")
+
+    def get_number_of_known_cards(self):
+        return np.abs(12 - np.sum(self.__unknown_cards))
+
+number_of_player = 4
+
+# for k in skyjo_instance.player_list:
+#     print(np.sum(k.get_known_cards()[1]))
+
+
+scores = []
+for k in trange(10000):
+    skyjo_instance = Skyjo_game(number_of_player)
+    pkc_list = [np.array([])] * 4
+    kc_list = [np.array([])] * 4
+    nk_cards = []
+    while not 12 in nk_cards:
+        for k in skyjo_instance.player_list:
+            k.play()
+            positions_k_cards, k_cards = k.get_known_cards()
+            pkc_list.append(positions_k_cards)
+            kc_list.append(k_cards)
+            nk_cards.append(k.get_number_of_known_cards())
+            # print(skyjo_instance.player_list[0].get_known_score())
+
     
-        
-skyjo_instance = Skyjo_game(4)
-for k in skyjo_instance.player_list:
-    print(np.sum(k.get_known_cards()[1]))
+    inter_scores = []
+    for k in skyjo_instance.player_list:
+        inter_scores.append(k._get_score())
+    scores.append(inter_scores)
+scores = np.array(scores)
