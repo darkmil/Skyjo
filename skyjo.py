@@ -32,6 +32,7 @@ value_threshold_replace = 4
 
 
 law = np.array([5, 10, 15] + [10]*12)
+expected_value = np.sum(law * (np.arange(15)-2) / 150)
 law_cs = np.cumsum(law)
 law_s = np.sum(law)
 
@@ -152,26 +153,36 @@ class Skyjo_player():
         top_discard_card_value = game.look_at_top_discard_card()
         known_cards_positions, known_cards_values = self.get_known_cards()
         if startegy == 'lowest':
-            if top_discard_card_value <= value_threshold_discard:
-                if np.max(known_cards_values) > top_discard_card_value:
-                    position_known_card = known_cards_positions[np.argmax(known_cards_values)]
-                    top_discard_card = game.card_from_discard()
-                    self.replace_card(position_known_card, top_discard_card)
-                else:
-                    top_discard_card = game.card_from_discard()
-                    position_uk_card = self.__select_uk_card_at_random()
-                    self.replace_card(position_uk_card, top_discard_card)
+            no_of_kc = self.get_number_of_known_cards()
+            if no_of_kc == cards_per_player - 1:
+                scores_estimated = []
+                for player in game.player_list:
+                    player_known_score = player.get_known_score()
+                    player_number_of_ukc = cards_per_player - player.get_number_of_known_cards()
+                    score_estimated = player_known_score + player_number_of_ukc * expected_value
+                    scores_estimated.append(score_estimated)
+                print(scores_estimated)
             else:
-                top_deck_card = game.card_from_deck()
-                if top_deck_card <= value_threshold_replace:
-                    if np.max(known_cards_values) > top_deck_card:
+                if top_discard_card_value <= value_threshold_discard:
+                    if np.max(known_cards_values) > top_discard_card_value:
                         position_known_card = known_cards_positions[np.argmax(known_cards_values)]
-                        self.replace_card(position_known_card, top_deck_card)
+                        top_discard_card = game.card_from_discard()
+                        self.replace_card(position_known_card, top_discard_card)
                     else:
+                        top_discard_card = game.card_from_discard()
                         position_uk_card = self.__select_uk_card_at_random()
-                        self.replace_card(position_uk_card, top_deck_card)
+                        self.replace_card(position_uk_card, top_discard_card)
                 else:
-                    self.look_at_random_card()
+                    top_deck_card = game.card_from_deck()
+                    if top_deck_card <= value_threshold_replace:
+                        if np.max(known_cards_values) > top_deck_card:
+                            position_known_card = known_cards_positions[np.argmax(known_cards_values)]
+                            self.replace_card(position_known_card, top_deck_card)
+                        else:
+                            position_uk_card = self.__select_uk_card_at_random()
+                            self.replace_card(position_uk_card, top_deck_card)
+                    else:
+                        self.look_at_random_card()
         else:
             raise InvalidStartegy("The strategy selected doesn't exist.")
 
@@ -182,6 +193,9 @@ number_of_player = 4
 
 # for k in skyjo_instance.player_list:
 #     print(np.sum(k.get_known_cards()[1]))
+
+
+# skyjo_instance = Skyjo_game(number_of_player)
 
 
 scores = []
